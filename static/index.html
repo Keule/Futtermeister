@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Futtermischungs-Rechner</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Rations- und Mischungsberechnung</p>
+      <h1>Futtermischungs-Rechner</h1>
+      <p class="subtitle">Excel-Nährstoffdaten laden, Futtermittel kombinieren und die Mischung auf Frischmasse- und Trockenmassebasis auswerten.</p>
+    </div>
+    <div class="header-badge">lokal · ohne Cloud</div>
+  </header>
+
+  <main class="page">
+    <section class="panel upload-panel">
+      <div>
+        <h2>1. Nährstofftabelle laden</h2>
+        <p>Unterstützt werden <strong>.xlsx</strong> und <strong>.csv</strong>. Die App sucht die Kopfzeile automatisch und verwendet bevorzugt Datensätze mit der Bezugsbasis „Trockenmasse“.</p>
+      </div>
+      <div class="upload-actions">
+        <label class="file-button">
+          <input id="fileInput" type="file" accept=".xlsx,.csv">
+          Excel-Datei auswählen
+        </label>
+        <a class="button secondary" href="/sample">Beispieldatei</a>
+      </div>
+      <div id="uploadStatus" class="status neutral">Noch keine Datei geladen.</div>
+    </section>
+
+    <section id="workspace" class="workspace hidden">
+      <section class="panel recipe-meta">
+        <div class="section-heading">
+          <div>
+            <h2>2. Rezeptdaten</h2>
+            <p>Alle Mengen werden zunächst je Tier und Tag gerechnet. Tierzahl und Tage skalieren anschließend den Gesamtbedarf.</p>
+          </div>
+          <div class="recipe-actions">
+            <button id="saveRecipeButton" class="button secondary" type="button">Im Browser speichern</button>
+            <button id="loadRecipeButton" class="button secondary" type="button">Gespeichertes laden</button>
+            <button id="exportButton" class="button secondary" type="button">CSV exportieren</button>
+            <button id="resetButton" class="button danger-ghost" type="button">Zurücksetzen</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label>Rezeptname<input id="recipeName" value="Neue Futtermischung"></label>
+          <label>Tiere<input id="animalCount" type="number" min="1" step="1" value="1"></label>
+          <label>Tage<input id="dayCount" type="number" min="1" step="1" value="1"></label>
+          <label>Währung<input id="currency" value="€" maxlength="4"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>3. Tiergruppe und Sollwerte</h2>
+            <p>Eine Sollwerttabelle kann als .xlsx oder .csv geladen werden. Erwartete Spalten sind Tiergruppe, Gewicht, optional Zunahme und Nährstoffe wie ME/NEL, XP/nXP, Ca, P, Mg und Na.</p>
+          </div>
+          <div class="upload-actions">
+            <label class="file-button">
+              <input id="requirementFileInput" type="file" accept=".xlsx,.csv">
+              Sollwerte laden
+            </label>
+            <a class="button secondary" href="/requirements/sample">Sollwert-Beispiel</a>
+          </div>
+        </div>
+        <div id="requirementStatus" class="status neutral">Noch keine Sollwerttabelle geladen. Zielwerte können unten weiterhin manuell eingetragen werden.</div>
+        <div class="form-grid animal-grid">
+          <label>Tiergruppe<select id="animalGroup"><option value="">manuell</option></select></label>
+          <label>Gewicht kg<input id="animalWeight" class="numeric" type="number" min="0" step="10" value="450"></label>
+          <label>Zunahmeziel g/Tag<input id="gainTarget" class="numeric" type="number" min="0" step="50" value="1350"></label>
+          <label>passender Sollwert<input id="matchedRequirement" readonly value="kein Datensatz"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>4. Komponenten</h2>
+            <p>„Analysewerte“ öffnet die geladenen Nährwerte der Komponente. Dort können eigene Laborwerte eingesetzt werden.</p>
+          </div>
+          <button id="addRowButton" class="button" type="button">Komponente hinzufügen</button>
+        </div>
+        <div class="table-wrap">
+          <table class="components-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Futtermittel</th>
+                <th>kg FM<br>Tier/Tag</th>
+                <th>TM<br>g/kg FM</th>
+                <th>Preis<br>€/kg FM</th>
+                <th>TM kg</th>
+                <th>XP g</th>
+                <th>nXP g</th>
+                <th>RNB g</th>
+                <th>ME MJ</th>
+                <th>Kosten</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="componentBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>5. Ergebnis je Tier und Tag</h2>
+            <p>UDP wird nach dem Rohproteinbeitrag gewichtet. Addierbare Nährstoffe und Energiewerte werden aus der jeweiligen Trockenmassemenge summiert.</p>
+          </div>
+        </div>
+        <div id="kpiGrid" class="kpi-grid"></div>
+        <div class="table-wrap result-wrap">
+          <table class="results-table">
+            <thead>
+              <tr><th>Kennzahl</th><th>Gesamtration</th><th>je kg Frischmasse</th><th>je kg Trockenmasse</th></tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel two-column">
+        <div>
+          <h2>5. Gesamtbedarf</h2>
+          <div id="scaleSummary" class="summary-list"></div>
+        </div>
+        <div>
+          <h2>7. Zielwertkontrolle</h2>
+          <p class="small-text">Optionale Mindest- und Höchstwerte je Tier und Tag. Leere Felder werden nicht geprüft.</p>
+          <div class="table-wrap compact-wrap">
+            <table class="targets-table">
+              <thead><tr><th>Kennzahl</th><th>Minimum</th><th>Maximum</th><th>Ist</th><th>Status</th></tr></thead>
+              <tbody id="targetBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="analysisDialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Komponentenspezifische Werte</p>
+          <h2 id="analysisTitle">Analysewerte</h2>
+        </div>
+        <button class="icon-button" value="cancel" aria-label="Schließen">×</button>
+      </div>
+      <p>Die Werte beziehen sich – außer TM – auf 1 kg Trockenmasse. Leere Felder bleiben leer. Mit „Originalwerte“ werden die Werte aus der hochgeladenen Tabelle wiederhergestellt.</p>
+      <div id="analysisFields" class="analysis-grid"></div>
+      <div class="dialog-actions">
+        <button id="restoreAnalysisButton" class="button secondary" type="button">Originalwerte</button>
+        <button class="button secondary" value="cancel">Abbrechen</button>
+        <button id="applyAnalysisButton" class="button" type="button">Übernehmen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="/static/calc.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
