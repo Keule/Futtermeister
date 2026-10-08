@@ -117,6 +117,8 @@ UDP der Mischung [%] = Summe(XP-Menge × UDP %) ÷ Summe(XP-Menge)
 ## Abgrenzung
 
 Die Version 1.0 berechnet und kontrolliert Rationen. Eine automatische kostenoptimierte Rationsfindung mit Nebenbedingungen (Solver) ist noch nicht enthalten.
+## Release
+V1 released
 
 ## Tests
 
